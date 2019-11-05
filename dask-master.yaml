@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: python
+  name: python
+  namespace: dask
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: python
+  template:
+    metadata:
+      labels:
+        app: python
+    spec:
+      containers:
+      - name: python
+        image: python:3.7
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: 1
+            memory: 3.75G
+          requests:
+            cpu: 1
+            memory: 3.75G
+        command: [ "/bin/bash", "-c", "--" ]
+        args: [ "while true; do sleep 10; done;" ]
+      serviceAccountName: dask-master
