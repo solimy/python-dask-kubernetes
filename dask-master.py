@@ -1,10 +1,15 @@
+from datetime import datetime
 from dask_kubernetes import KubeCluster
-import dask.dataframe as dd
 from dask.distributed import Client
 from dask import compute, delayed
 from dask.distributed import get_worker, LocalCluster
+import os
+import json
+import dask.dataframe as dd
 import pandas as pd
 
+
+LOCAL = json.loads(os.getenv('LOCAL', 'false'))
 CLUSTER = None
 
 
@@ -56,17 +61,18 @@ def test(data):
 
 def save_data(data):
     print('-:- Saving data -:-')
-    data.to_csv('data.csv')
+    data.to_csv(f'{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}_data.csv')
     print('-:- Saving data : Done -:-')
 
 
 if __name__ == "__main__":
-    LOCAL = False
     if LOCAL:
-        cluster = LocalCluster()  # KubeCluster.from_yaml('dask-worker.yaml')
+        cluster = LocalCluster()
+        print('CLUSTER="LOCAL"')
     else:
         cluster = KubeCluster.from_yaml('dask-worker.yaml')
         cluster.adapt(minimum=0, maximum=20)
+        print('CLUSTER="KUBERNETES"')
     CLUSTER = cluster
     main()
     cluster.close()
