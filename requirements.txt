@@ -1,6 +1,2 @@
-numpy
-pandas
-dask
-dask[dataframe]
-distributed
+dask[complete]
 dask-kubernetes
