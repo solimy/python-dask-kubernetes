@@ -5,6 +5,7 @@ from dask import compute, delayed
 from dask.distributed import get_worker, LocalCluster
 import os
 import json
+import psutil
 import dask.dataframe as dd
 import pandas as pd
 
@@ -23,7 +24,7 @@ def main():
 
 def fetch_data():
     print('-:- Fetching data -:-')
-    data = pd.DataFrame.from_records([{"index": i} for i in range(1000)], index="index")
+    data = pd.DataFrame.from_records([{"index": i} for i in range(1000000)], index="index")
     print('-:- Fetching data : Done -:-')
     return data
 
@@ -31,7 +32,7 @@ def fetch_data():
 def transform_data(data):
     print('-:- Transforming data -:-')
     client = Client(CLUSTER)
-    ddf = dd.from_pandas(data, 1000)
+    ddf = dd.from_pandas(data, 10000)
     print('Building DAG...')
     delayed_results = [
         delayed(test)(ddf.get_partition(partition))
@@ -55,13 +56,18 @@ def test(data):
     data["worker.ip"] = worker.ip
     data["worker.id"] = worker.id
     data["worker.thread_id"] = worker.thread_id
+    data["cpu.percent"] = psutil.cpu_percent()
+    data["mem.percent"] = psutil.virtual_memory().percent
     print(f'worker.ip:{worker.ip}|worker.id:{worker.id}|worker.thread_id:{worker.thread_id}')
     return data
 
 
 def save_data(data):
     print('-:- Saving data -:-')
-    data.to_csv(f'{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}_data.csv')
+    now = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    data.to_csv(f'{now}_data.csv')
+    workers = [*(data['worker.ip'] + " -:- " + data['worker.id']).unique()]
+    json.dump(workers, open(f'{now}_workers.json', 'w'), indent=4)
     print('-:- Saving data : Done -:-')
 
 
@@ -71,7 +77,7 @@ if __name__ == "__main__":
         print('CLUSTER="LOCAL"')
     else:
         cluster = KubeCluster.from_yaml('dask-worker.yaml')
-        cluster.adapt(minimum=0, maximum=20)
+        cluster.adapt(minimum=5, maximum=20)
         print('CLUSTER="KUBERNETES"')
     CLUSTER = cluster
     main()
