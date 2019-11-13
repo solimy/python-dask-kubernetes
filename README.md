@@ -46,5 +46,5 @@ Setup is done !
 - exits with error code 137.
 - exits with error code 1.
 and :
- ````distributed.scheduler.KilledWorker: ("('from_pandas-AN_UUID', 2000)", <Worker 'tcp://10.28.1.46:42205', memory: 0, processing: 3692>)````
+ ````distributed.scheduler.KilledWorker: ("('from_pandas-AN_UUID', 2000)", <Worker 'tcp://AN_IP:A_PORT', memory: 0, processing: 9999>)````
 	> eg: from_pandas-AN_UUID -> 'from_pandas-b823d0872c18ebc1510e9e03b3ccf52a'
