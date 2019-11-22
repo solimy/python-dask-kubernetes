@@ -10,7 +10,11 @@ import dask.dataframe as dd
 import pandas as pd
 import logging as logger
 
-logger.basicConfig(level=os.getenv("LOGLEVEL","INFO"))
+logger.basicConfig(
+    format='%(asctime)s %(process)-5d %(levelname)-8s %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    level=os.getenv("LOGLEVEL","INFO")
+)
 LOCAL = json.loads(os.getenv('LOCAL', 'false'))
 CLUSTER = None
 
@@ -23,7 +27,8 @@ def main():
         save_data(data)
     except:
         logger.critical('', exc_info=True) 
-        
+        logger.critical('-:- MAIN : KO -:-')
+        exit(1)
     logger.info('-:- MAIN : Done -:-')
 
 
