@@ -8,46 +8,51 @@ import json
 import psutil
 import dask.dataframe as dd
 import pandas as pd
+import logging as logger
 
-
+logger.basicConfig(level=os.getenv("LOGLEVEL","INFO"))
 LOCAL = json.loads(os.getenv('LOCAL', 'false'))
 CLUSTER = None
 
 
 def main():
-    print('-:- MAIN -:-')
-    data = fetch_data()
-    data = transform_data(data)
-    save_data(data)
-    print('-:- MAIN : Done -:-')
+    logger.info('-:- MAIN -:-')
+    try:
+        data = fetch_data()
+        data = transform_data(data)
+        save_data(data)
+    except:
+        logger.critical('', exc_info=True) 
+        
+    logger.info('-:- MAIN : Done -:-')
 
 
 def fetch_data():
-    print('-:- Fetching data -:-')
+    logger.info('-:- Fetching data -:-')
     data = pd.DataFrame.from_records([{"index": i} for i in range(1000000)], index="index")
-    print('-:- Fetching data : Done -:-')
+    logger.info('-:- Fetching data : Done -:-')
     return data
 
 
 def transform_data(data):
-    print('-:- Transforming data -:-')
+    logger.info('-:- Transforming data -:-')
     client = Client(CLUSTER)
     ddf = dd.from_pandas(data, 10000)
-    print('Building DAG...')
+    logger.info('Building DAG...')
     delayed_results = [
         delayed(test)(ddf.get_partition(partition))
         for partition
         in range(ddf.npartitions)
     ]
-    print('Building DAG... Done.')
-    print('Computing results...')
+    logger.info('Building DAG... Done.')
+    logger.info('Computing results...')
     results = compute(*delayed_results)
-    print('Computing results... Done.')
-    print('Concatenating results...')
+    logger.info('Computing results... Done.')
+    logger.info('Concatenating results...')
     data = pd.concat([*results])
-    print('Concatenating results... Done.')
+    logger.info('Concatenating results... Done.')
     client.close()
-    print('-:- Transforming data : Done -:-')
+    logger.info('-:- Transforming data : Done -:-')
     return data
 
 
@@ -58,27 +63,27 @@ def test(data):
     data["worker.thread_id"] = worker.thread_id
     data["cpu.percent"] = psutil.cpu_percent()
     data["mem.percent"] = psutil.virtual_memory().percent
-    print(f'worker.ip:{worker.ip}|worker.id:{worker.id}|worker.thread_id:{worker.thread_id}')
+    logger.info(f'worker.ip:{worker.ip}|worker.id:{worker.id}|worker.thread_id:{worker.thread_id}')
     return data
 
 
 def save_data(data):
-    print('-:- Saving data -:-')
+    logger.info('-:- Saving data -:-')
     now = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     data.to_csv(f'{now}_data.csv')
     workers = [*(data['worker.ip'] + " -:- " + data['worker.id']).unique()]
     json.dump(workers, open(f'{now}_workers.json', 'w'), indent=4)
-    print('-:- Saving data : Done -:-')
+    logger.info('-:- Saving data : Done -:-')
 
 
 if __name__ == "__main__":
     if LOCAL:
         cluster = LocalCluster()
-        print('CLUSTER="LOCAL"')
+        logger.info('CLUSTER="LOCAL"')
     else:
         cluster = KubeCluster.from_yaml('dask-worker.yaml')
         cluster.adapt(minimum=5, maximum=20)
-        print('CLUSTER="KUBERNETES"')
+        logger.info('CLUSTER="KUBERNETES"')
     CLUSTER = cluster
     main()
     cluster.close()
